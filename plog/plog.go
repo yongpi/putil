@@ -3,7 +3,7 @@ package plog
 type LevelType int
 
 const (
-	Fatal LevelType = iota
+	FATAL LevelType = iota
 	ERROR
 	WARN
 	INFO

@@ -33,7 +33,7 @@ func (ep *EntryPool) GetEntry() *Entry {
 	return ep.pool.Get().(*Entry)
 }
 
-func (ep *EntryPool) PutBuffer(entry *Entry) {
+func (ep *EntryPool) PutEntry(entry *Entry) {
 	entry.Release()
 	ep.pool.Put(entry)
 }
@@ -44,6 +44,7 @@ var (
 	packageName     string
 	packageSkip     int
 	packageInitOnce sync.Once
+	root            *Logger
 )
 
 const (
@@ -63,15 +64,102 @@ func init() {
 			return new(Entry)
 		},
 	}}
+	root = NewLogger(INFO)
 }
 
 type Logger struct {
 	sync.Mutex
-	Out      io.Writer
-	Level    LevelType
-	IsCaller bool
-	Format   Formatter
-	Hooks    Hooks
+	Out        io.Writer
+	Level      LevelType
+	IsCaller   bool
+	Format     Formatter
+	Hooks      Hooks
+	AutoCaller bool
+}
+
+func NewLogger(levelType LevelType) *Logger {
+	return &Logger{
+		Out:        os.Stderr,
+		Level:      levelType,
+		Format:     new(DefaultFormatter),
+		AutoCaller: true,
+	}
+}
+
+func (logger *Logger) newEntry() *Entry {
+	entry := entryPool.GetEntry()
+	entry.logger = logger
+	return entry
+}
+
+func (logger *Logger) WithContext(ctx context.Context) *Entry {
+	entry := logger.newEntry()
+	defer entryPool.PutEntry(entry)
+	return entry.WithContext(ctx)
+}
+
+func (logger *Logger) WithError(err error) *Entry {
+	entry := logger.newEntry()
+	defer entryPool.PutEntry(entry)
+	return entry.WithError(err)
+}
+
+func (logger *Logger) WithTime(time time.Time) *Entry {
+	entry := logger.newEntry()
+	defer entryPool.PutEntry(entry)
+	return entry.WithTime(time)
+}
+
+func (logger *Logger) logf(levelType LevelType, format string, args ...interface{}) {
+	if levelType > logger.Level {
+		return
+	}
+	entry := logger.newEntry()
+	entry.Logf(levelType, format, args...)
+	entryPool.PutEntry(entry)
+}
+
+func (logger *Logger) Info(msg string) {
+	logger.logf(INFO, msg)
+}
+
+func (logger *Logger) Infof(format string, args ...interface{}) {
+	logger.logf(INFO, format, args...)
+}
+
+func (logger *Logger) Warn(msg string) {
+	logger.logf(WARN, msg)
+}
+
+func (logger *Logger) Warnf(format string, args ...interface{}) {
+	logger.logf(WARN, format, args...)
+}
+
+func (logger *Logger) Error(msg string) {
+	logger.logf(ERROR, msg)
+}
+
+func (logger *Logger) Errorf(format string, args ...interface{}) {
+	logger.logf(ERROR, format, args...)
+}
+
+func (logger *Logger) Debug(msg string) {
+	logger.logf(DEBUG, msg)
+}
+
+func (logger *Logger) Debugf(format string, args ...interface{}) {
+	logger.logf(DEBUG, format, args...)
+}
+
+func (logger *Logger) Fatal(msg string) {
+	logger.logf(FATAL, msg)
+	os.Exit(1)
+
+}
+
+func (logger *Logger) Fatalf(format string, args ...interface{}) {
+	logger.logf(FATAL, format, args...)
+	os.Exit(1)
 }
 
 type Entry struct {
@@ -94,47 +182,49 @@ func (e *Entry) WithError(err error) *Entry {
 }
 
 func (e *Entry) WithTime(time time.Time) *Entry {
-	return &Entry{logger: e.logger, Context: e.Context, Err: e.Err, Time: time}
+	return &Entry{logger: e.logger, Context: e.Context, Err: e.Err, Time: &time}
 }
 
 func (e *Entry) Info(msg string) {
-	panic("implement me")
+	e.Logf(INFO, msg)
 }
 
 func (e *Entry) Infof(format string, args ...interface{}) {
-	panic("implement me")
+	e.Logf(INFO, format, args...)
 }
 
 func (e *Entry) Warn(msg string) {
-	panic("implement me")
+	e.Logf(WARN, msg)
 }
 
 func (e *Entry) Warnf(format string, args ...interface{}) {
-	panic("implement me")
+	e.Logf(WARN, format, args...)
 }
 
 func (e *Entry) Error(msg string) {
-	panic("implement me")
+	e.Logf(ERROR, msg)
 }
 
 func (e *Entry) Errorf(format string, args ...interface{}) {
-	panic("implement me")
+	e.Logf(ERROR, format, args...)
 }
 
 func (e *Entry) Debug(msg string) {
-	panic("implement me")
+	e.Logf(DEBUG, msg)
 }
 
 func (e *Entry) Debugf(format string, args ...interface{}) {
-	panic("implement me")
+	e.Logf(DEBUG, format, args...)
 }
 
 func (e *Entry) Fatal(msg string) {
-	panic("implement me")
+	e.Logf(FATAL, msg)
+	os.Exit(1)
 }
 
 func (e *Entry) Fatalf(format string, args ...interface{}) {
-	panic("implement me")
+	e.Logf(FATAL, format, args...)
+	os.Exit(1)
 }
 
 func (e *Entry) Release() {
@@ -146,8 +236,8 @@ func (e *Entry) Release() {
 	e.Buffer = nil
 }
 
-func (e *Entry) Log(levelType LevelType, msg string) {
-	if e.logger.Level <= levelType {
+func (e *Entry) Logf(levelType LevelType, format string, args ...interface{}) {
+	if e.logger.Level < levelType {
 		return
 	}
 
@@ -156,15 +246,19 @@ func (e *Entry) Log(levelType LevelType, msg string) {
 		now := time.Now()
 		newEntry.Time = &now
 	}
+	newEntry.Level = levelType
 
 	newEntry.logger.Lock()
 	isCaller := newEntry.logger.IsCaller
+	autoCaller := newEntry.logger.AutoCaller
 	newEntry.logger.Unlock()
-
+	if autoCaller && levelType <= ERROR {
+		isCaller = true
+	}
 	if isCaller {
 		newEntry.CallFrame = getCaller()
 	}
-	newEntry.Msg = msg
+	newEntry.Msg = fmt.Sprintf(format, args...)
 
 	// 执行钩子
 	newEntry.logger.Hooks.HookOn(&newEntry)
@@ -177,9 +271,6 @@ func (e *Entry) Log(levelType LevelType, msg string) {
 
 	// 写日志
 	newEntry.write()
-
-	entryPool.PutBuffer(&newEntry)
-
 }
 
 func (e *Entry) write() {
@@ -234,4 +325,69 @@ func getPackageName(f string) string {
 	}
 
 	return f
+}
+
+func WithContext(ctx context.Context) *Entry {
+	entry := root.newEntry()
+	defer entryPool.PutEntry(entry)
+	return entry.WithContext(ctx)
+}
+
+func WithError(err error) *Entry {
+	entry := root.newEntry()
+	defer entryPool.PutEntry(entry)
+	return entry.WithError(err)
+}
+
+func WithTime(time time.Time) *Entry {
+	entry := root.newEntry()
+	defer entryPool.PutEntry(entry)
+	return entry.WithTime(time)
+}
+
+func Info(msg string) {
+	root.logf(INFO, msg)
+}
+
+func Infof(format string, args ...interface{}) {
+	root.logf(INFO, format, args...)
+}
+
+func Warn(msg string) {
+	root.logf(WARN, msg)
+}
+
+func Warnf(format string, args ...interface{}) {
+	root.logf(WARN, format, args...)
+}
+
+func Error(msg string) {
+	root.logf(ERROR, msg)
+}
+
+func Errorf(format string, args ...interface{}) {
+	root.logf(ERROR, format, args...)
+}
+
+func Debug(msg string) {
+	root.logf(DEBUG, msg)
+}
+
+func Debugf(format string, args ...interface{}) {
+	root.logf(DEBUG, format, args...)
+}
+
+func Fatal(msg string) {
+	root.logf(FATAL, msg)
+	os.Exit(1)
+
+}
+
+func Fatalf(format string, args ...interface{}) {
+	root.logf(FATAL, format, args...)
+	os.Exit(1)
+}
+
+func InjectHook(levelType LevelType, hook Hook) {
+	root.Hooks[levelType] = append(root.Hooks[levelType], hook)
 }
