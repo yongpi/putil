@@ -241,6 +241,7 @@ func (e *Entry) Logf(levelType LevelType, format string, args ...interface{}) {
 		return
 	}
 
+	// 复制到新的 entry
 	newEntry := *e
 	if newEntry.Time == nil {
 		now := time.Now()
@@ -248,14 +249,19 @@ func (e *Entry) Logf(levelType LevelType, format string, args ...interface{}) {
 	}
 	newEntry.Level = levelType
 
+	// 因为 logger 是共享的， 所以需要上锁获取 logger 的 IsCaller 和 AutoCaller 属性
 	newEntry.logger.Lock()
 	isCaller := newEntry.logger.IsCaller
 	autoCaller := newEntry.logger.AutoCaller
 	newEntry.logger.Unlock()
+
+	// AutoCaller 逻辑
 	if autoCaller && levelType <= ERROR {
 		isCaller = true
 	}
+
 	if isCaller {
+		// 获取调用函数的栈帧
 		newEntry.CallFrame = getCaller()
 	}
 	newEntry.Msg = fmt.Sprintf(format, args...)
@@ -263,12 +269,13 @@ func (e *Entry) Logf(levelType LevelType, format string, args ...interface{}) {
 	// 执行钩子
 	newEntry.logger.Hooks.HookOn(&newEntry)
 
+	// 获取 buffer
 	buffer := bufferPool.GetBuffer()
 	defer func() {
 		bufferPool.PutBuffer(buffer)
 	}()
-	newEntry.Buffer = buffer
 
+	newEntry.Buffer = buffer
 	// 写日志
 	newEntry.write()
 }
@@ -281,6 +288,7 @@ func (e *Entry) write() {
 	}
 	e.logger.Lock()
 	defer e.logger.Unlock()
+	// 写入需要加锁
 	if _, err := e.logger.Out.Write(lc); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "plog：logger io write 出现错误， err = %v", err)
 		return
@@ -288,10 +296,12 @@ func (e *Entry) write() {
 }
 
 func getCaller() *runtime.Frame {
+	// 初始化一次，获取当前包的包名
 	packageInitOnce.Do(func() {
-		pcs := make([]uintptr, maxSkip)
+		pcs := make([]uintptr, 2)
+		// 从 runtime.Callers 开始获取栈，两层就够了
 		runtime.Callers(0, pcs)
-		for i := 0; i < maxSkip; i++ {
+		for i := 0; i < 2; i++ {
 			funcName := runtime.FuncForPC(pcs[i]).Name()
 			if strings.Contains(funcName, "getCaller") {
 				packageName = getPackageName(funcName)
@@ -302,9 +312,11 @@ func getCaller() *runtime.Frame {
 	})
 
 	pcs := make([]uintptr, maxSkip)
+	// 从第四层调用开始，最大 25 层
 	n := runtime.Callers(packageSkip, pcs)
 	frames := runtime.CallersFrames(pcs[:n])
 	for frame, more := frames.Next(); more; frame, more = frames.Next() {
+		// 只有包名不是当前的包，说明找到调用方了
 		if getPackageName(frame.Function) != packageName {
 			return &frame
 		}
