@@ -41,7 +41,7 @@ func (f *DefaultFormatter) Format(entry *Entry) ([]byte, error) {
 		entry.Buffer.WriteString(fmt.Sprintf(" %s.%d", entry.CallFrame.File, entry.CallFrame.Line))
 	}
 	entry.Buffer.WriteString(fmt.Sprintf("]"))
-	entry.Buffer.WriteString(fmt.Sprintf(" msg = %s", entry.Msg))
+	entry.Buffer.WriteString(fmt.Sprintf(" %s", entry.Msg))
 	if entry.Err != nil {
 		entry.Buffer.WriteString(fmt.Sprintf(", err = %s", entry.Err.Error()))
 	}
