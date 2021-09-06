@@ -1,4 +1,4 @@
-package ptest
+package tests
 
 import (
 	"errors"
