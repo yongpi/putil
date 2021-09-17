@@ -23,6 +23,46 @@ type SqlTransform interface {
 	ToSql(pt PlaceHolderType) (query string, args []interface{}, err error)
 }
 
+type SqlBuilder struct {
+	HolderType PlaceHolderType
+}
+
+func NewSqlBuilder(holderType PlaceHolderType) SqlBuilder {
+	return SqlBuilder{HolderType: holderType}
+}
+
+func (s SqlBuilder) Select(columns ...string) *selectTransform {
+	return NewSelect(s.HolderType).Column(columns...)
+}
+
+func (s SqlBuilder) Insert(table string) *insertTransform {
+	return NewInsert(s.HolderType).Table(table)
+}
+
+func (s SqlBuilder) Delete(table string) *deleteTransform {
+	return NewDelete(s.HolderType).Table(table)
+}
+
+func (s SqlBuilder) Update(table string) *updateTransform {
+	return NewUpdate(s.HolderType).Table(table)
+}
+
+func Select(columns ...string) *selectTransform {
+	return NewSelect(Question).Column(columns...)
+}
+
+func Insert(table string) *insertTransform {
+	return NewInsert(Question).Table(table)
+}
+
+func Delete(table string) *deleteTransform {
+	return NewDelete(Question).Table(table)
+}
+
+func Update(table string) *updateTransform {
+	return NewUpdate(Question).Table(table)
+}
+
 type SqlParam struct {
 	query interface{}
 	args  []interface{}
