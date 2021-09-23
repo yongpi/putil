@@ -3,7 +3,7 @@ package tests
 import (
 	"testing"
 
-	"github.com/putil/psql"
+	"github.com/yongpi/putil/psql"
 )
 
 func TestSelect(t *testing.T) {

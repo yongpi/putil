@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/putil/plog"
+	"github.com/yongpi/putil/plog"
 )
 
 func TestLog(t *testing.T) {
