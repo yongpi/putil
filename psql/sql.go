@@ -31,35 +31,35 @@ func NewSqlBuilder(holderType PlaceHolderType) SqlBuilder {
 	return SqlBuilder{HolderType: holderType}
 }
 
-func (s SqlBuilder) Select(columns ...string) *selectTransform {
+func (s SqlBuilder) Select(columns ...string) *SelectTransform {
 	return NewSelect(s.HolderType).Column(columns...)
 }
 
-func (s SqlBuilder) Insert(table string) *insertTransform {
+func (s SqlBuilder) Insert(table string) *InsertTransform {
 	return NewInsert(s.HolderType).Table(table)
 }
 
-func (s SqlBuilder) Delete(table string) *deleteTransform {
+func (s SqlBuilder) Delete(table string) *DeleteTransform {
 	return NewDelete(s.HolderType).Table(table)
 }
 
-func (s SqlBuilder) Update(table string) *updateTransform {
+func (s SqlBuilder) Update(table string) *UpdateTransform {
 	return NewUpdate(s.HolderType).Table(table)
 }
 
-func Select(columns ...string) *selectTransform {
+func Select(columns ...string) *SelectTransform {
 	return NewSelect(Question).Column(columns...)
 }
 
-func Insert(table string) *insertTransform {
+func Insert(table string) *InsertTransform {
 	return NewInsert(Question).Table(table)
 }
 
-func Delete(table string) *deleteTransform {
+func Delete(table string) *DeleteTransform {
 	return NewDelete(Question).Table(table)
 }
 
-func Update(table string) *updateTransform {
+func Update(table string) *UpdateTransform {
 	return NewUpdate(Question).Table(table)
 }
 

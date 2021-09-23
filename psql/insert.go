@@ -6,33 +6,33 @@ import (
 	"strings"
 )
 
-type insertTransform struct {
+type InsertTransform struct {
 	holderType PlaceHolderType
 	table      string
 	columns    []string
 	values     [][]interface{}
 }
 
-func NewInsert(holderType PlaceHolderType) *insertTransform {
-	return &insertTransform{holderType: holderType}
+func NewInsert(holderType PlaceHolderType) *InsertTransform {
+	return &InsertTransform{holderType: holderType}
 }
 
-func (it *insertTransform) Table(table string) *insertTransform {
+func (it *InsertTransform) Table(table string) *InsertTransform {
 	it.table = table
 	return it
 }
 
-func (it *insertTransform) Columns(columns ...string) *insertTransform {
+func (it *InsertTransform) Columns(columns ...string) *InsertTransform {
 	it.columns = append(it.columns, columns...)
 	return it
 }
 
-func (it *insertTransform) Values(values ...interface{}) *insertTransform {
+func (it *InsertTransform) Values(values ...interface{}) *InsertTransform {
 	it.values = append(it.values, values)
 	return it
 }
 
-func (it *insertTransform) SetMap(data map[string]interface{}) *insertTransform {
+func (it *InsertTransform) SetMap(data map[string]interface{}) *InsertTransform {
 	var columns []string
 	for key := range data {
 		columns = append(columns, key)
@@ -52,7 +52,7 @@ func (it *insertTransform) SetMap(data map[string]interface{}) *insertTransform 
 	return it
 }
 
-func (it *insertTransform) ToSql() (query string, args []interface{}, err error) {
+func (it *InsertTransform) ToSql() (query string, args []interface{}, err error) {
 	var sql strings.Builder
 	_, err = sql.WriteString(fmt.Sprintf("INSERT INTO %s ", it.table))
 	if err != nil {

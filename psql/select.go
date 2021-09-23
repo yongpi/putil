@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type selectTransform struct {
+type SelectTransform struct {
 	holderType  PlaceHolderType
 	table       string
 	columns     []SqlTransform
@@ -17,67 +17,67 @@ type selectTransform struct {
 	groupBys    []SqlTransform
 }
 
-func NewSelect(holderType PlaceHolderType) *selectTransform {
-	return &selectTransform{holderType: holderType}
+func NewSelect(holderType PlaceHolderType) *SelectTransform {
+	return &SelectTransform{holderType: holderType}
 }
 
-func (st *selectTransform) Column(columns ...string) *selectTransform {
+func (st *SelectTransform) Column(columns ...string) *SelectTransform {
 	for _, column := range columns {
 		st.columns = append(st.columns, SqlParam{query: column})
 	}
 	return st
 }
 
-func (st *selectTransform) From(table string) *selectTransform {
+func (st *SelectTransform) From(table string) *SelectTransform {
 	st.table = table
 	return st
 }
 
-func (st *selectTransform) OrderBy(orderBys ...string) *selectTransform {
+func (st *SelectTransform) OrderBy(orderBys ...string) *SelectTransform {
 	for _, orderBy := range orderBys {
 		st.orderBys = append(st.orderBys, SqlParam{query: orderBy})
 	}
 	return st
 }
 
-func (st *selectTransform) GroupBy(groupBys ...string) *selectTransform {
+func (st *SelectTransform) GroupBy(groupBys ...string) *SelectTransform {
 	for _, groupBy := range groupBys {
 		st.groupBys = append(st.groupBys, SqlParam{query: groupBy})
 	}
 	return st
 }
 
-func (st *selectTransform) Limit(limit int64) *selectTransform {
+func (st *SelectTransform) Limit(limit int64) *SelectTransform {
 	st.limitValue = &limit
 	return st
 }
 
-func (st *selectTransform) Offset(offset int64) *selectTransform {
+func (st *SelectTransform) Offset(offset int64) *SelectTransform {
 	st.offsetValue = &offset
 	return st
 }
 
-func (st *selectTransform) Where(query interface{}, args ...interface{}) *selectTransform {
+func (st *SelectTransform) Where(query interface{}, args ...interface{}) *SelectTransform {
 	st.wheres = append(st.wheres, SqlParam{query: query, args: args})
 	return st
 }
 
-func (st *selectTransform) Join(query string, args ...interface{}) *selectTransform {
+func (st *SelectTransform) Join(query string, args ...interface{}) *SelectTransform {
 	st.joins = append(st.joins, SqlParam{query: fmt.Sprintf("JOIN %s", query), args: args})
 	return st
 }
 
-func (st *selectTransform) LeftJoin(query string, args ...interface{}) *selectTransform {
+func (st *SelectTransform) LeftJoin(query string, args ...interface{}) *SelectTransform {
 	st.joins = append(st.joins, SqlParam{query: fmt.Sprintf("LEFT JOIN %s", query), args: args})
 	return st
 }
 
-func (st *selectTransform) RightJoin(query string, args ...interface{}) *selectTransform {
+func (st *SelectTransform) RightJoin(query string, args ...interface{}) *SelectTransform {
 	st.joins = append(st.joins, SqlParam{query: fmt.Sprintf("RIGHT JOIN %s", query), args: args})
 	return st
 }
 
-func (st *selectTransform) ToSql() (query string, args []interface{}, err error) {
+func (st *SelectTransform) ToSql() (query string, args []interface{}, err error) {
 	var sql strings.Builder
 	holdType := st.holderType
 	sql.WriteString("SELECT ")

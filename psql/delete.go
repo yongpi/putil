@@ -5,27 +5,27 @@ import (
 	"strings"
 )
 
-type deleteTransform struct {
+type DeleteTransform struct {
 	holderType PlaceHolderType
 	table      string
 	wheres     []SqlTransform
 }
 
-func NewDelete(holderType PlaceHolderType) *deleteTransform {
-	return &deleteTransform{holderType: holderType}
+func NewDelete(holderType PlaceHolderType) *DeleteTransform {
+	return &DeleteTransform{holderType: holderType}
 }
 
-func (t *deleteTransform) Table(table string) *deleteTransform {
+func (t *DeleteTransform) Table(table string) *DeleteTransform {
 	t.table = table
 	return t
 }
 
-func (t *deleteTransform) Where(query interface{}, args ...interface{}) *deleteTransform {
+func (t *DeleteTransform) Where(query interface{}, args ...interface{}) *DeleteTransform {
 	t.wheres = append(t.wheres, SqlParam{query: query, args: args})
 	return t
 }
 
-func (t *deleteTransform) ToSql() (query string, args []interface{}, err error) {
+func (t *DeleteTransform) ToSql() (query string, args []interface{}, err error) {
 	var sql strings.Builder
 	_, err = sql.WriteString(fmt.Sprintf("DELETE FROM %s ", t.table))
 	if err != nil {

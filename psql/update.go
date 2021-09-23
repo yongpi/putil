@@ -10,28 +10,28 @@ type setParam struct {
 	column string
 	value  interface{}
 }
-type updateTransform struct {
+type UpdateTransform struct {
 	holderType PlaceHolderType
 	table      string
 	sets       []setParam
 	wheres     []SqlTransform
 }
 
-func NewUpdate(holderType PlaceHolderType) *updateTransform {
-	return &updateTransform{holderType: Question}
+func NewUpdate(holderType PlaceHolderType) *UpdateTransform {
+	return &UpdateTransform{holderType: Question}
 }
 
-func (t *updateTransform) Table(table string) *updateTransform {
+func (t *UpdateTransform) Table(table string) *UpdateTransform {
 	t.table = table
 	return t
 }
 
-func (t *updateTransform) Set(column string, value interface{}) *updateTransform {
+func (t *UpdateTransform) Set(column string, value interface{}) *UpdateTransform {
 	t.sets = append(t.sets, setParam{column: column, value: value})
 	return t
 }
 
-func (t *updateTransform) SetMap(data map[string]interface{}) *updateTransform {
+func (t *UpdateTransform) SetMap(data map[string]interface{}) *UpdateTransform {
 	var columns []string
 	for key := range data {
 		columns = append(columns, key)
@@ -44,12 +44,12 @@ func (t *updateTransform) SetMap(data map[string]interface{}) *updateTransform {
 	return t
 }
 
-func (t *updateTransform) Where(query interface{}, args ...interface{}) *updateTransform {
+func (t *UpdateTransform) Where(query interface{}, args ...interface{}) *UpdateTransform {
 	t.wheres = append(t.wheres, SqlParam{query: query, args: args})
 	return t
 }
 
-func (t *updateTransform) ToSql() (query string, args []interface{}, err error) {
+func (t *UpdateTransform) ToSql() (query string, args []interface{}, err error) {
 	var sql strings.Builder
 	_, err = sql.WriteString(fmt.Sprintf("UPDATE %s ", t.table))
 	if err != nil {
