@@ -21,7 +21,7 @@ func TestSelect(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	exSql := "SELECT id, name FROM test " +
+	exSql := "SELECT id,name FROM test " +
 		"LEFT JOIN sku on sku.id=test.id " +
 		"Where name = ? And type IN (?,?,?) AND (name = ? OR (id = ? AND desc = ?)) AND name = ? AND type = ? " +
 		"GROUP BY id " +

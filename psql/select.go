@@ -8,7 +8,7 @@ import (
 type SelectTransform struct {
 	holderType  PlaceHolderType
 	TableName   string
-	Columns     []SqlTransform
+	Columns     []string
 	Wheres      []SqlTransform
 	OrderBys    []SqlTransform
 	LimitValue  *int64
@@ -22,9 +22,7 @@ func NewSelect(holderType PlaceHolderType) *SelectTransform {
 }
 
 func (st *SelectTransform) Column(columns ...string) *SelectTransform {
-	for _, column := range columns {
-		st.Columns = append(st.Columns, SqlParam{query: column})
-	}
+	st.Columns = append(st.Columns, columns...)
 	return st
 }
 
@@ -85,10 +83,7 @@ func (st *SelectTransform) ToSql() (query string, args []interface{}, err error)
 	if len(st.Columns) == 0 {
 		return "", nil, fmt.Errorf("select sql lack of column")
 	}
-	args, err = appendToSql(st.Columns, ", ", &sql, args, holdType)
-	if err != nil {
-		return
-	}
+	sql.WriteString(strings.Join(st.Columns, ","))
 
 	if st.TableName == "" {
 		return "", nil, fmt.Errorf("select sql lack of TableName")
