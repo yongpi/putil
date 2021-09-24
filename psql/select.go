@@ -7,14 +7,14 @@ import (
 
 type SelectTransform struct {
 	holderType  PlaceHolderType
-	table       string
-	columns     []SqlTransform
-	wheres      []SqlTransform
-	orderBys    []SqlTransform
-	limitValue  *int64
-	offsetValue *int64
-	joins       []SqlTransform
-	groupBys    []SqlTransform
+	TableName   string
+	Columns     []SqlTransform
+	Wheres      []SqlTransform
+	OrderBys    []SqlTransform
+	LimitValue  *int64
+	OffsetValue *int64
+	Joins       []SqlTransform
+	GroupBys    []SqlTransform
 }
 
 func NewSelect(holderType PlaceHolderType) *SelectTransform {
@@ -23,57 +23,57 @@ func NewSelect(holderType PlaceHolderType) *SelectTransform {
 
 func (st *SelectTransform) Column(columns ...string) *SelectTransform {
 	for _, column := range columns {
-		st.columns = append(st.columns, SqlParam{query: column})
+		st.Columns = append(st.Columns, SqlParam{query: column})
 	}
 	return st
 }
 
 func (st *SelectTransform) From(table string) *SelectTransform {
-	st.table = table
+	st.TableName = table
 	return st
 }
 
 func (st *SelectTransform) OrderBy(orderBys ...string) *SelectTransform {
 	for _, orderBy := range orderBys {
-		st.orderBys = append(st.orderBys, SqlParam{query: orderBy})
+		st.OrderBys = append(st.OrderBys, SqlParam{query: orderBy})
 	}
 	return st
 }
 
 func (st *SelectTransform) GroupBy(groupBys ...string) *SelectTransform {
 	for _, groupBy := range groupBys {
-		st.groupBys = append(st.groupBys, SqlParam{query: groupBy})
+		st.GroupBys = append(st.GroupBys, SqlParam{query: groupBy})
 	}
 	return st
 }
 
 func (st *SelectTransform) Limit(limit int64) *SelectTransform {
-	st.limitValue = &limit
+	st.LimitValue = &limit
 	return st
 }
 
 func (st *SelectTransform) Offset(offset int64) *SelectTransform {
-	st.offsetValue = &offset
+	st.OffsetValue = &offset
 	return st
 }
 
 func (st *SelectTransform) Where(query interface{}, args ...interface{}) *SelectTransform {
-	st.wheres = append(st.wheres, SqlParam{query: query, args: args})
+	st.Wheres = append(st.Wheres, SqlParam{query: query, args: args})
 	return st
 }
 
 func (st *SelectTransform) Join(query string, args ...interface{}) *SelectTransform {
-	st.joins = append(st.joins, SqlParam{query: fmt.Sprintf("JOIN %s", query), args: args})
+	st.Joins = append(st.Joins, SqlParam{query: fmt.Sprintf("JOIN %s", query), args: args})
 	return st
 }
 
 func (st *SelectTransform) LeftJoin(query string, args ...interface{}) *SelectTransform {
-	st.joins = append(st.joins, SqlParam{query: fmt.Sprintf("LEFT JOIN %s", query), args: args})
+	st.Joins = append(st.Joins, SqlParam{query: fmt.Sprintf("LEFT JOIN %s", query), args: args})
 	return st
 }
 
 func (st *SelectTransform) RightJoin(query string, args ...interface{}) *SelectTransform {
-	st.joins = append(st.joins, SqlParam{query: fmt.Sprintf("RIGHT JOIN %s", query), args: args})
+	st.Joins = append(st.Joins, SqlParam{query: fmt.Sprintf("RIGHT JOIN %s", query), args: args})
 	return st
 }
 
@@ -82,55 +82,55 @@ func (st *SelectTransform) ToSql() (query string, args []interface{}, err error)
 	holdType := st.holderType
 	sql.WriteString("SELECT ")
 
-	if len(st.columns) == 0 {
+	if len(st.Columns) == 0 {
 		return "", nil, fmt.Errorf("select sql lack of column")
 	}
-	args, err = appendToSql(st.columns, ", ", &sql, args, holdType)
+	args, err = appendToSql(st.Columns, ", ", &sql, args, holdType)
 	if err != nil {
 		return
 	}
 
-	if st.table == "" {
-		return "", nil, fmt.Errorf("select sql lack of table")
+	if st.TableName == "" {
+		return "", nil, fmt.Errorf("select sql lack of TableName")
 	}
-	sql.WriteString(fmt.Sprintf(" FROM %s ", st.table))
+	sql.WriteString(fmt.Sprintf(" FROM %s ", st.TableName))
 
-	if len(st.joins) > 0 {
-		args, err = appendToSql(st.joins, " ", &sql, args, holdType)
+	if len(st.Joins) > 0 {
+		args, err = appendToSql(st.Joins, " ", &sql, args, holdType)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(st.wheres) > 0 {
+	if len(st.Wheres) > 0 {
 		sql.WriteString(" Where ")
-		args, err = appendToSql(st.wheres, " AND ", &sql, args, holdType)
+		args, err = appendToSql(st.Wheres, " AND ", &sql, args, holdType)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(st.groupBys) > 0 {
+	if len(st.GroupBys) > 0 {
 		sql.WriteString(" GROUP BY ")
-		args, err = appendToSql(st.groupBys, ", ", &sql, args, holdType)
+		args, err = appendToSql(st.GroupBys, ", ", &sql, args, holdType)
 		if err != nil {
 			return
 		}
 	}
 
-	if len(st.orderBys) > 0 {
+	if len(st.OrderBys) > 0 {
 		sql.WriteString(" ORDER BY ")
-		args, err = appendToSql(st.orderBys, ", ", &sql, args, holdType)
+		args, err = appendToSql(st.OrderBys, ", ", &sql, args, holdType)
 		if err != nil {
 			return
 		}
 	}
 
-	if st.limitValue != nil {
-		sql.WriteString(fmt.Sprintf(" LIMIT %d", *st.limitValue))
+	if st.LimitValue != nil {
+		sql.WriteString(fmt.Sprintf(" LIMIT %d", *st.LimitValue))
 	}
-	if st.offsetValue != nil {
-		sql.WriteString(fmt.Sprintf(" OFFSET %d", *st.offsetValue))
+	if st.OffsetValue != nil {
+		sql.WriteString(fmt.Sprintf(" OFFSET %d", *st.OffsetValue))
 	}
 
 	return sql.String(), args, nil

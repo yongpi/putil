@@ -40,9 +40,9 @@ func TestSelect(t *testing.T) {
 
 func TestInsert(t *testing.T) {
 	query, args, err := psql.Insert("test").
-		Columns("id", "name").
-		Values(1, "name1").
-		Values(2, "name2").ToSql()
+		Column("id", "name").
+		Value(1, "name1").
+		Value(2, "name2").ToSql()
 
 	if err != nil {
 		t.Error(err)

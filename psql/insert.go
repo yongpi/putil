@@ -8,9 +8,9 @@ import (
 
 type InsertTransform struct {
 	holderType PlaceHolderType
-	table      string
-	columns    []string
-	values     [][]interface{}
+	TableName  string
+	Columns    []string
+	Values     [][]interface{}
 }
 
 func NewInsert(holderType PlaceHolderType) *InsertTransform {
@@ -18,17 +18,17 @@ func NewInsert(holderType PlaceHolderType) *InsertTransform {
 }
 
 func (it *InsertTransform) Table(table string) *InsertTransform {
-	it.table = table
+	it.TableName = table
 	return it
 }
 
-func (it *InsertTransform) Columns(columns ...string) *InsertTransform {
-	it.columns = append(it.columns, columns...)
+func (it *InsertTransform) Column(columns ...string) *InsertTransform {
+	it.Columns = append(it.Columns, columns...)
 	return it
 }
 
-func (it *InsertTransform) Values(values ...interface{}) *InsertTransform {
-	it.values = append(it.values, values)
+func (it *InsertTransform) Value(values ...interface{}) *InsertTransform {
+	it.Values = append(it.Values, values)
 	return it
 }
 
@@ -39,36 +39,36 @@ func (it *InsertTransform) SetMap(data map[string]interface{}) *InsertTransform 
 	}
 
 	sort.Strings(columns)
-	it.columns = nil
-	it.values = nil
+	it.Columns = nil
+	it.Values = nil
 
 	var values []interface{}
 	for _, column := range columns {
-		it.columns = append(it.columns, column)
+		it.Columns = append(it.Columns, column)
 		values = append(values, data[column])
 	}
-	it.values = append(it.values, values)
+	it.Values = append(it.Values, values)
 
 	return it
 }
 
 func (it *InsertTransform) ToSql() (query string, args []interface{}, err error) {
 	var sql strings.Builder
-	_, err = sql.WriteString(fmt.Sprintf("INSERT INTO %s ", it.table))
+	_, err = sql.WriteString(fmt.Sprintf("INSERT INTO %s ", it.TableName))
 	if err != nil {
 		return
 	}
 
-	if len(it.columns) > 0 {
-		_, err = sql.WriteString(fmt.Sprintf("(%s)", strings.Join(it.columns, ",")))
+	if len(it.Columns) > 0 {
+		_, err = sql.WriteString(fmt.Sprintf("(%s)", strings.Join(it.Columns, ",")))
 		if err != nil {
 			return
 		}
 	}
 
 	sql.WriteString(" VALUES ")
-	if len(it.values) > 0 {
-		for li, list := range it.values {
+	if len(it.Values) > 0 {
+		for li, list := range it.Values {
 			if li > 0 {
 				_, err = sql.WriteString(",")
 				if err != nil {

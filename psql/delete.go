@@ -7,8 +7,8 @@ import (
 
 type DeleteTransform struct {
 	holderType PlaceHolderType
-	table      string
-	wheres     []SqlTransform
+	TableName  string
+	Wheres     []SqlTransform
 }
 
 func NewDelete(holderType PlaceHolderType) *DeleteTransform {
@@ -16,28 +16,28 @@ func NewDelete(holderType PlaceHolderType) *DeleteTransform {
 }
 
 func (t *DeleteTransform) Table(table string) *DeleteTransform {
-	t.table = table
+	t.TableName = table
 	return t
 }
 
 func (t *DeleteTransform) Where(query interface{}, args ...interface{}) *DeleteTransform {
-	t.wheres = append(t.wheres, SqlParam{query: query, args: args})
+	t.Wheres = append(t.Wheres, SqlParam{query: query, args: args})
 	return t
 }
 
 func (t *DeleteTransform) ToSql() (query string, args []interface{}, err error) {
 	var sql strings.Builder
-	_, err = sql.WriteString(fmt.Sprintf("DELETE FROM %s ", t.table))
+	_, err = sql.WriteString(fmt.Sprintf("DELETE FROM %s ", t.TableName))
 	if err != nil {
 		return
 	}
-	if len(t.wheres) > 0 {
+	if len(t.Wheres) > 0 {
 		_, err = sql.WriteString("WHERE ")
 		if err != nil {
 			return
 		}
 
-		args, err = appendToSql(t.wheres, " AND ", &sql, args, t.holderType)
+		args, err = appendToSql(t.Wheres, " AND ", &sql, args, t.holderType)
 		if err != nil {
 			return
 		}
