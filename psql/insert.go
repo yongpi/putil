@@ -7,14 +7,14 @@ import (
 )
 
 type InsertTransform struct {
-	holderType PlaceHolderType
+	HolderType PlaceHolderType
 	TableName  string
 	Columns    []string
 	Values     [][]interface{}
 }
 
 func NewInsert(holderType PlaceHolderType) *InsertTransform {
-	return &InsertTransform{holderType: holderType}
+	return &InsertTransform{HolderType: holderType}
 }
 
 func (it *InsertTransform) Table(table string) *InsertTransform {
@@ -77,7 +77,7 @@ func (it *InsertTransform) ToSql() (query string, args []interface{}, err error)
 			}
 			var markList []string
 			for _, value := range list {
-				markList = append(markList, it.holderType.Mark())
+				markList = append(markList, it.HolderType.Mark())
 				args = append(args, value)
 			}
 			if len(markList) > 0 {

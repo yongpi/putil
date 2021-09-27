@@ -6,7 +6,7 @@ import (
 )
 
 type SelectTransform struct {
-	holderType  PlaceHolderType
+	HolderType  PlaceHolderType
 	TableName   string
 	Columns     []string
 	Wheres      []SqlTransform
@@ -18,7 +18,7 @@ type SelectTransform struct {
 }
 
 func NewSelect(holderType PlaceHolderType) *SelectTransform {
-	return &SelectTransform{holderType: holderType}
+	return &SelectTransform{HolderType: holderType}
 }
 
 func (st *SelectTransform) Column(columns ...string) *SelectTransform {
@@ -77,7 +77,7 @@ func (st *SelectTransform) RightJoin(query string, args ...interface{}) *SelectT
 
 func (st *SelectTransform) ToSql() (query string, args []interface{}, err error) {
 	var sql strings.Builder
-	holdType := st.holderType
+	holdType := st.HolderType
 	sql.WriteString("SELECT ")
 
 	if len(st.Columns) == 0 {

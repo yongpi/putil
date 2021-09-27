@@ -11,14 +11,14 @@ type SetParam struct {
 	Value  interface{}
 }
 type UpdateTransform struct {
-	holderType PlaceHolderType
+	HolderType PlaceHolderType
 	TableName  string
 	Sets       []SetParam
 	Wheres     []SqlTransform
 }
 
 func NewUpdate(holderType PlaceHolderType) *UpdateTransform {
-	return &UpdateTransform{holderType: Question}
+	return &UpdateTransform{HolderType: Question}
 }
 
 func (t *UpdateTransform) Table(table string) *UpdateTransform {
@@ -68,7 +68,7 @@ func (t *UpdateTransform) ToSql() (query string, args []interface{}, err error) 
 					return
 				}
 			}
-			_, err = sql.WriteString(fmt.Sprintf("%s=%s", set.Column, t.holderType.Mark()))
+			_, err = sql.WriteString(fmt.Sprintf("%s=%s", set.Column, t.HolderType.Mark()))
 			if err != nil {
 				return
 			}
@@ -82,7 +82,7 @@ func (t *UpdateTransform) ToSql() (query string, args []interface{}, err error) 
 			return
 		}
 
-		args, err = appendToSql(t.Wheres, " AND ", &sql, args, t.holderType)
+		args, err = appendToSql(t.Wheres, " AND ", &sql, args, t.HolderType)
 		if err != nil {
 			return
 		}

@@ -6,13 +6,13 @@ import (
 )
 
 type DeleteTransform struct {
-	holderType PlaceHolderType
+	HolderType PlaceHolderType
 	TableName  string
 	Wheres     []SqlTransform
 }
 
 func NewDelete(holderType PlaceHolderType) *DeleteTransform {
-	return &DeleteTransform{holderType: holderType}
+	return &DeleteTransform{HolderType: holderType}
 }
 
 func (t *DeleteTransform) Table(table string) *DeleteTransform {
@@ -37,7 +37,7 @@ func (t *DeleteTransform) ToSql() (query string, args []interface{}, err error) 
 			return
 		}
 
-		args, err = appendToSql(t.Wheres, " AND ", &sql, args, t.holderType)
+		args, err = appendToSql(t.Wheres, " AND ", &sql, args, t.HolderType)
 		if err != nil {
 			return
 		}
