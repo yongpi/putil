@@ -50,6 +50,7 @@ var (
 const (
 	minSkip = 4
 	maxSkip = 25
+	LevelTypeEnvName = "plog.level_type"
 )
 
 func init() {
@@ -64,7 +65,8 @@ func init() {
 			return new(Entry)
 		},
 	}}
-	root = NewLogger(INFO)
+
+	root = NewLogger(LevelTypeFromString(os.Getenv(LevelTypeEnvName)))
 }
 
 type Logger struct {

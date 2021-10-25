@@ -10,6 +10,22 @@ const (
 	DEBUG
 )
 
+var LevelTypeMap = map[string]LevelType{
+	"fatal": FATAL,
+	"error": ERROR,
+	"warn":  WARN,
+	"info":  INFO,
+	"debug": DEBUG,
+}
+
+func LevelTypeFromString(levelTypeStr string) LevelType {
+	levelType, ok := LevelTypeMap[levelTypeStr]
+	if !ok {
+		levelType = INFO
+	}
+	return levelType
+}
+
 type Log interface {
 	Info(msg string)
 	Infof(format string, args ...interface{})
