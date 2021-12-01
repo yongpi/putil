@@ -115,53 +115,53 @@ func isListType(value interface{}) bool {
 
 type Eq expr
 
-func (e Eq) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e Eq) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), eq, pt)
 }
 
 type NotEq expr
 
-func (e NotEq) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e NotEq) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), notEq, pt)
 }
 
 type Like expr
 
-func (e Like) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e Like) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), like, pt)
 }
 
 type NotLike expr
 
-func (e NotLike) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e NotLike) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), notLike, pt)
 }
 
 type Lt expr
 
-func (e Lt) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e Lt) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), lt, pt)
 }
 
 type Lte expr
 
-func (e Lte) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e Lte) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), lte, pt)
 }
 
 type Gt expr
 
-func (e Gt) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e Gt) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), gt, pt)
 }
 
 type Gte expr
 
-func (e Gte) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (e Gte) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return exprToSql(expr(e), gte, pt)
 }
 
-type cond []SqlTransform
+type cond []SqlCond
 type condType int
 
 const (
@@ -190,7 +190,7 @@ func condToSql(conditions cond, ct condType, pt PlaceHolderType) (query string, 
 				return "", nil, err
 			}
 		}
-		cq, cs, err := condition.ToSql(pt)
+		cq, cs, err := condition.ToWhere(pt)
 		if err != nil {
 			return "", nil, err
 		}
@@ -208,12 +208,12 @@ func condToSql(conditions cond, ct condType, pt PlaceHolderType) (query string, 
 
 type And cond
 
-func (a And) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (a And) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return condToSql(cond(a), and, pt)
 }
 
 type Or cond
 
-func (o Or) ToSql(pt PlaceHolderType) (query string, args []interface{}, err error) {
+func (o Or) ToWhere(pt PlaceHolderType) (query string, args []interface{}, err error) {
 	return condToSql(cond(o), or, pt)
 }
