@@ -12,23 +12,22 @@ const (
 	Idle ConnState = iota
 	Activity
 	Busy
-	Close
 )
 
 type Closer interface {
 	Close()
 }
 
-func NewConn[T Closer](conn T, busyCount int) *Conn[T] {
-	return &Conn[T]{connect: conn, markBusyCount: busyCount}
+func NewConn[T Closer](conn T, balance *Balancer[T]) *Conn[T] {
+	return &Conn[T]{connect: conn, balance: balance, state: Idle}
 }
 
 type Conn[T Closer] struct {
 	sync.RWMutex
-	count         int
-	state         ConnState
-	connect       T
-	markBusyCount int
+	count   int
+	state   ConnState
+	connect T
+	balance *Balancer[T]
 }
 
 func (c *Conn[T]) use() {
@@ -36,9 +35,13 @@ func (c *Conn[T]) use() {
 	defer c.Unlock()
 
 	c.count++
-	if c.count >= c.markBusyCount {
-		c.state = Busy
+	if c.count < c.balance.markBusyCount {
+		c.state = Activity
+		return
 	}
+
+	c.state = Busy
+	c.balance.incrBusyCount()
 }
 
 func (c *Conn[T]) Close() {
@@ -46,43 +49,64 @@ func (c *Conn[T]) Close() {
 	defer c.Unlock()
 
 	c.count--
-	if c.count < c.markBusyCount {
-		c.state = Activity
+	if c.count >= c.balance.markBusyCount {
+		return
 	}
+
+	c.state = Activity
+	c.balance.decrBusyCount()
+	return
 }
 
 func (c *Conn[T]) GetConnect() T {
 	return c.connect
 }
 
-func NewBalance[T Closer](serviceName string, core, max, markBusyCount int, lowLoadRatio float64, newFun func(serviceName string) T, checkDuration time.Duration) *Balancer[T] {
-	balance := &Balancer[T]{
-		list:          make([]*Conn[T], 0),
-		core:          core,
-		max:           max,
-		markBusyCount: markBusyCount,
-		lowLoadRatio:  lowLoadRatio,
-		serviceName:   serviceName,
-		newConn:       newFun,
-		checkDuration: checkDuration,
+func NewBalance[T Closer](options ...BalanceOption[T]) *Balancer[T] {
+	cfg := &BalanceConfig[T]{
+		core:          3,
+		max:           5,
+		markBusyCount: 5,
+		lowLoadRatio:  0.65,
+		checkDuration: 15 * time.Second,
 	}
 
-	go balance.Release()
+	for _, option := range options {
+		option(cfg)
+	}
+
+	if cfg.newConn == nil {
+		panic("new conn must need")
+	}
+
+	balance := &Balancer[T]{
+		list:          make([]*Conn[T], 0),
+		BalanceConfig: cfg,
+	}
+
+	go balance.release()
+	return balance
+}
+
+func newBalance[T Closer](cfg *BalanceConfig[T]) *Balancer[T] {
+	if cfg.newConn == nil {
+		panic("new conn must need")
+	}
+
+	balance := &Balancer[T]{
+		list:          make([]*Conn[T], 0),
+		BalanceConfig: cfg,
+	}
+
+	go balance.release()
 	return balance
 }
 
 type Balancer[T Closer] struct {
 	sync.RWMutex
-	list          []*Conn[T]
-	core          int
-	max           int
-	busyCount     int
-	markBusyCount int
-	lowLoadRatio  float64
-	serviceName   string
-	newConn       func(serviceName string) T
-	checkDuration time.Duration
-	index         int
+	*BalanceConfig[T]
+	list  []*Conn[T]
+	index int
 }
 
 func (b *Balancer[T]) IsHighLoad() bool {
@@ -93,12 +117,13 @@ func (b *Balancer[T]) IsHighLoad() bool {
 	return false
 }
 
-func (b *Balancer[T]) Release() {
+func (b *Balancer[T]) release() {
 	ticker := time.Tick(b.checkDuration)
 
 	for {
 		select {
 		case <-ticker:
+			// 连接池没到核心数，或者处于高负载，不释放连接
 			if len(b.list) <= b.core || b.IsHighLoad() {
 				continue
 			}
@@ -107,6 +132,10 @@ func (b *Balancer[T]) Release() {
 			if len(b.list) == 0 {
 				continue
 			}
+
+			// 清理之前先排序
+			b.sort()
+			// 数组最后一个连接连接数最少
 			conn := b.list[len(b.list)-1]
 			if conn.count > 0 {
 				b.Unlock()
@@ -120,31 +149,47 @@ func (b *Balancer[T]) Release() {
 	}
 }
 
-func (b *Balancer[T]) Sort() {
+func (b *Balancer[T]) sort() {
 	sort.Slice(b.list, func(i, j int) bool {
 		return b.list[i].count > b.list[j].count
 	})
 }
 
-func (b *Balancer[T]) newConnect() *Conn[T] {
-	connect := NewConn(b.newConn(b.serviceName), b.markBusyCount)
+func (b *Balancer[T]) incrBusyCount() {
+	b.Lock()
+	defer b.Unlock()
+
+	b.busyCount++
+	return
+}
+
+func (b *Balancer[T]) decrBusyCount() {
+	b.Lock()
+	defer b.Unlock()
+
+	b.busyCount--
+	return
+}
+
+func (b *Balancer[T]) newConnect(service string) *Conn[T] {
+	connect := NewConn(b.newConn(service), b)
 	b.Lock()
 	defer b.Unlock()
 	b.list = append(b.list, connect)
-	b.Sort()
+	b.sort()
 	return connect
 }
 
-func (b *Balancer[T]) Connect() *Conn[T] {
+func (b *Balancer[T]) Connect(service string) *Conn[T] {
 	// 核心池没满，直接新建连接
 	if len(b.list) < b.core {
-		return b.newConnect()
+		return b.newConnect(service)
 	}
 
 	// 核心池已满，并且没有到最大连接数
 	// 判断是否高负载
 	if len(b.list) < b.max && b.IsHighLoad() {
-		return b.newConnect()
+		return b.newConnect(service)
 	}
 
 	// 低负载或者达到最大连接数
@@ -164,5 +209,6 @@ func (b *Balancer[T]) Connect() *Conn[T] {
 	}
 
 	b.index++
+	conn.use()
 	return conn
 }
