@@ -31,12 +31,29 @@ e4CMrZDC12iMH84/oXLzaX02cvLY4mm9dSgJ5l/RFok=
 )
 
 func TestRSA(t *testing.T) {
-	data := "测试 111sss sss"
+	data := "999000"
+
+	pbk := base64.StdEncoding.EncodeToString([]byte(publicKey))
+	fmt.Println(pbk)
+
+	dk, err := base64.StdEncoding.DecodeString(pbk)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(string(dk))
 
 	ed, err := RSAEncrypt([]byte(data), publicKey)
 	if err != nil {
 		t.Fatal(err)
 	}
+	fmt.Println(base64.StdEncoding.EncodeToString(ed))
+
+	ed, err = RSAEncrypt([]byte(data), publicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Println(base64.StdEncoding.EncodeToString(ed))
 
 	dd, err := RSADecrypt(ed, privateKey)
 	if err != nil {
