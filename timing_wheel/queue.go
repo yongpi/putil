@@ -30,10 +30,7 @@ func NewDelayBucketQueue() *DelayBucketQueue {
 func (q *DelayBucketQueue) watch() {
 	for {
 		timeMs := time.Now().UnixMilli()
-
-		q.Lock()
 		bucket, delay := q.popTimeMs(timeMs)
-		q.Unlock()
 
 		if bucket != nil {
 			q.c <- bucket
@@ -59,6 +56,9 @@ func (q *DelayBucketQueue) watch() {
 }
 
 func (q *DelayBucketQueue) popTimeMs(timeMs int64) (*Bucket, int64) {
+	q.Lock()
+	defer q.Unlock()
+
 	if len(q.priorityQueue.list) == 0 {
 		return nil, 0
 	}

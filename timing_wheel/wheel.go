@@ -146,6 +146,7 @@ func (w *TimingWheel) addOrRun(task *TimerTask) {
 func (w *TimingWheel) bucketClean(bucket *Bucket) {
 	list := bucket.Clear()
 	for _, task := range list {
+		// 注意这里，清理出来的 task 假如没到执行时间，则重新加入新的 bucket 中
 		w.addOrRun(task)
 	}
 }
