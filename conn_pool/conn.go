@@ -4,6 +4,8 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/yongpi/putil/plog"
 )
 
 type ConnState int
@@ -123,6 +125,8 @@ func (b *Balancer[T]) release() {
 	for {
 		select {
 		case <-ticker:
+			plog.Debugf("[Balancer] check release")
+
 			// 连接池没到核心数，或者处于高负载，不释放连接
 			if len(b.list) <= b.core || b.IsHighLoad() {
 				continue
@@ -141,6 +145,8 @@ func (b *Balancer[T]) release() {
 				b.Unlock()
 				continue
 			}
+
+			plog.Debugf("[Balancer] release conn = %#v", conn)
 
 			conn.connect.Close()
 			b.list = b.list[:len(b.list)-1]
@@ -173,6 +179,9 @@ func (b *Balancer[T]) decrBusyCount() {
 
 func (b *Balancer[T]) newConnect(service string) *Conn[T] {
 	connect := NewConn(b.newConn(service), b)
+
+	plog.Debugf("[Balancer] new connect = %#v", connect)
+
 	b.Lock()
 	defer b.Unlock()
 	b.list = append(b.list, connect)
@@ -199,16 +208,24 @@ func (b *Balancer[T]) Connect(service string) *Conn[T] {
 	conn := b.list[b.index%len(b.list)]
 	if conn.state != Busy {
 		b.index++
+		conn.use()
+
+		plog.Debugf("[Balancer] use first not busy conn = %#v", conn)
 		return conn
 	}
 
 	second := b.list[b.index+1%len(b.list)]
 	if second.state != Busy {
 		b.index++
+		second.use()
+
+		plog.Debugf("[Balancer] use second not busy conn = %#v", conn)
 		return second
 	}
 
 	b.index++
 	conn.use()
+
+	plog.Debugf("[Balancer] use busy conn = %#v", conn)
 	return conn
 }

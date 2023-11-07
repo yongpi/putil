@@ -1,6 +1,9 @@
 package conn_pool
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type BalancePool[T Closer] struct {
 	sync.Mutex
@@ -11,7 +14,14 @@ type BalancePool[T Closer] struct {
 func NewBalancePool[T Closer](options ...BalanceOption[T]) *BalancePool[T] {
 	pool := &BalancePool[T]{pool: make(map[string]*Balancer[T])}
 
-	cfg := &BalanceConfig[T]{}
+	cfg := &BalanceConfig[T]{
+		core:          3,
+		max:           5,
+		markBusyCount: 5,
+		lowLoadRatio:  0.65,
+		checkDuration: 15 * time.Second,
+	}
+
 	for _, option := range options {
 		option(cfg)
 	}
