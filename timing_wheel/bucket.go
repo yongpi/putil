@@ -23,12 +23,15 @@ func NewBucket() *Bucket {
 func (b *Bucket) Clear() []*TimerTask {
 	data := make([]*TimerTask, 0)
 
+	// 先上锁，防止其他协程操作当前桶，比如向桶中加入数据
 	b.Lock()
 	defer b.Unlock()
 
+	// 遍历桶中的 task
 	node := b.list.Front()
 	for node != nil {
 		next := node.Next()
+		// 删除 task，O(1)
 		b.list.Remove(node)
 
 		task := node.Value.(*TimerTask)
@@ -45,6 +48,7 @@ func (b *Bucket) Clear() []*TimerTask {
 }
 
 func (b *Bucket) Push(task *TimerTask) bool {
+	// 对于桶的操作需要加锁
 	b.Lock()
 	defer b.Unlock()
 

@@ -5,16 +5,26 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/yongpi/putil/plog"
 )
 
 type WaitGroupWrapper struct {
 	sync.WaitGroup
 }
 
-func (s *WaitGroupWrapper) AddDone(fun func()) {
+func (s *WaitGroupWrapper) SafeRun(fun func()) {
 	s.Add(1)
 
 	go func() {
+		defer func() {
+			// 如果发生 panic 则执行不到 Done 方法，需要 recover
+			if err := recover(); err != nil {
+				plog.Errorf("[WaitGroupWrapper] fun panic!, err = %#v", err)
+				s.Done()
+			}
+		}()
+
 		fun()
 		s.Done()
 	}()
@@ -62,6 +72,7 @@ func NewTimingWheel(tick time.Duration, wheelSize int64) *TimingWheel {
 
 	timeWheel.currentTime.Store(TruncateTime(time.Now().UnixMilli(), tickMs))
 
+	// 时间轮开始转动
 	go func() {
 		timeWheel.spin()
 	}()
@@ -71,10 +82,13 @@ func NewTimingWheel(tick time.Duration, wheelSize int64) *TimingWheel {
 func (w *TimingWheel) spin() {
 	for {
 		select {
+		// 延迟队列中是否存在数据
 		case bucket := <-w.queue.OfferC():
+			// 更新时间轮当前时间戳
 			w.currentTime.Store(bucket.expireTime)
 
-			w.AddDone(func() {
+			// 清理桶中的任务：执行或者到新的时间轮的新桶中
+			w.SafeRun(func() {
 				w.bucketClean(bucket)
 			})
 
@@ -86,6 +100,7 @@ func (w *TimingWheel) spin() {
 
 func (w *TimingWheel) AddAfter(duration time.Duration, fun func()) {
 	task := &TimerTask{
+		// 根据时间轮的 tick 参数，计算出来对应的放到时间轮中的时间
 		expireTime: TruncateTime(time.Now().UnixMilli()+duration.Milliseconds(), w.wheel.tick),
 		fun:        fun,
 	}
@@ -94,14 +109,15 @@ func (w *TimingWheel) AddAfter(duration time.Duration, fun func()) {
 }
 
 func (w *TimingWheel) addOrRun(task *TimerTask) {
-	// 小于当前时间，直接运行
 	currentTime := w.currentTime.Load()
 
+	// 小于当前时间，直接运行
 	if task.expireTime < currentTime {
-		w.AddDone(task.fun)
+		w.SafeRun(task.fun)
 		return
 	}
 
+	// 大于当前时间，遍历时间轮选择加入
 	wheel := w.wheel
 	for {
 		// 处在当前时间轮里
@@ -109,6 +125,7 @@ func (w *TimingWheel) addOrRun(task *TimerTask) {
 			// 找到 bucket
 			index := (task.expireTime - currentTime) / wheel.tick
 
+			// 加锁查找时间轮中的桶，有并发的情况，需要加锁查找和新建桶
 			w.Lock()
 			bucket := wheel.buckets[index%wheel.wheelSize]
 			// 新建 bucket
@@ -118,7 +135,8 @@ func (w *TimingWheel) addOrRun(task *TimerTask) {
 			}
 			w.Unlock()
 
-			// 放到 bucket 里
+			// 放到 bucket 里，如果桶原来的过期时间为 -1，说明桶没有加入到延迟队列
+			// 则加入到延迟队列中
 			if bucket.Push(task) {
 				w.queue.Push(bucket)
 			}
